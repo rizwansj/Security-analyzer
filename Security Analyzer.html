@@ -1,0 +1,992 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SecureCode Analyzer</title>
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --surface: #111827;
+      --surface2: #1a2235;
+      --border: #1e3a5f;
+      --accent: #00d4ff;
+      --accent2: #7c3aed;
+      --green: #10b981;
+      --red: #ef4444;
+      --orange: #f59e0b;
+      --yellow: #fbbf24;
+      --text: #e2e8f0;
+      --muted: #64748b;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    .logo-text h1 { font-size: 20px; font-weight: 700; color: var(--accent); }
+    .logo-text p { font-size: 11px; color: var(--muted); }
+    .badge {
+      background: rgba(0,212,255,0.1);
+      border: 1px solid rgba(0,212,255,0.3);
+      color: var(--accent);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* MAIN LAYOUT */
+    .container { max-width: 1400px; margin: 0 auto; padding: 28px 24px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media(max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+    /* PANELS */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .panel-header {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .panel-title {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 14px; font-weight: 600; color: var(--text);
+    }
+    .panel-title span { font-size: 16px; }
+
+    /* LANGUAGE SELECTOR */
+    .lang-bar {
+      display: flex; gap: 8px; padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .lang-btn {
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 12px; font-weight: 600;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .lang-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .lang-btn.active {
+      background: rgba(0,212,255,0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* CODE EDITOR */
+    .code-area {
+      position: relative;
+    }
+    textarea#codeInput {
+      width: 100%;
+      height: 360px;
+      background: #070d18;
+      color: #a8d8ff;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      border: none;
+      outline: none;
+      padding: 16px 20px;
+      resize: vertical;
+      tab-size: 2;
+    }
+    textarea#codeInput::placeholder { color: #2d4a6e; }
+
+    /* BUTTONS */
+    .btn-row {
+      display: flex; gap: 10px; padding: 14px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 13px; font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all .2s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #0090cc);
+      color: #000;
+      flex: 1;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,212,255,0.3); }
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { color: var(--text); border-color: var(--muted); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+
+    /* RESULTS */
+    .results-area { padding: 0; }
+    .summary-bar {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 1px; background: var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .summary-cell {
+      background: var(--surface);
+      padding: 14px;
+      text-align: center;
+    }
+    .summary-cell .count { font-size: 24px; font-weight: 800; }
+    .summary-cell .label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+    .c-red { color: var(--red); }
+    .c-orange { color: var(--orange); }
+    .c-yellow { color: var(--yellow); }
+    .c-green { color: var(--green); }
+
+    .vuln-list { max-height: 340px; overflow-y: auto; padding: 12px; }
+    .vuln-list::-webkit-scrollbar { width: 6px; }
+    .vuln-list::-webkit-scrollbar-track { background: var(--surface); }
+    .vuln-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .vuln-item {
+      background: var(--surface2);
+      border-radius: 10px;
+      border-left: 3px solid var(--border);
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      transition: transform .15s;
+    }
+    .vuln-item:hover { transform: translateX(3px); }
+    .vuln-item.critical { border-color: var(--red); }
+    .vuln-item.high { border-color: var(--orange); }
+    .vuln-item.medium { border-color: var(--yellow); }
+    .vuln-item.low { border-color: var(--green); }
+
+    .vuln-top {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .vuln-type {
+      font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .sev-badge {
+      font-size: 10px; font-weight: 700;
+      padding: 2px 8px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: .5px;
+    }
+    .sev-critical { background: rgba(239,68,68,.2); color: var(--red); }
+    .sev-high { background: rgba(245,158,11,.2); color: var(--orange); }
+    .sev-medium { background: rgba(251,191,36,.2); color: var(--yellow); }
+    .sev-low { background: rgba(16,185,129,.2); color: var(--green); }
+
+    .vuln-desc { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .vuln-line { font-size: 11px; color: #3b82f6; font-family: monospace; }
+    .vuln-fix {
+      font-size: 11px; color: #6ee7b7;
+      background: rgba(16,185,129,.05);
+      border: 1px solid rgba(16,185,129,.15);
+      border-radius: 6px; padding: 6px 10px; margin-top: 8px;
+    }
+    .vuln-fix strong { color: var(--green); }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center; padding: 60px 20px; color: var(--muted);
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 13px; }
+
+    /* SAFE STATE */
+    .safe-state {
+      text-align: center; padding: 60px 20px;
+    }
+    .safe-state .icon { font-size: 56px; margin-bottom: 12px; }
+    .safe-state h3 { color: var(--green); font-size: 18px; margin-bottom: 6px; }
+    .safe-state p { font-size: 13px; color: var(--muted); }
+
+    /* SCORE */
+    .score-ring {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; color: var(--muted);
+    }
+    .score-num { font-size: 18px; font-weight: 800; }
+
+    /* SCANNING ANIMATION */
+    @keyframes scan { 0%,100%{opacity:.4} 50%{opacity:1} }
+    .scanning { animation: scan .8s infinite; }
+
+    /* SAMPLES */
+    .samples-section { padding: 16px 20px 0; }
+    .samples-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .sample-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .sample-chip {
+      font-size: 11px; padding: 4px 10px;
+      border-radius: 6px; cursor: pointer;
+      background: rgba(124,58,237,.15);
+      border: 1px solid rgba(124,58,237,.3);
+      color: #a78bfa;
+      transition: all .2s;
+    }
+    .sample-chip:hover { background: rgba(124,58,237,.3); }
+
+    /* PROGRESS */
+    .progress-bar {
+      height: 3px; background: var(--border);
+      border-radius: 2px; overflow: hidden; margin: 0 20px 0;
+    }
+    .progress-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 2px;
+      transition: width .3s;
+    }
+
+    .full-width { grid-column: 1 / -1; }
+    .report-panel { }
+    .report-inner { padding: 16px 20px; }
+    .report-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+    .report-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px;
+      text-align: center;
+    }
+    .report-card .rc-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .report-card .rc-val { font-size: 20px; font-weight: 800; color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛡️</div>
+    <div class="logo-text">
+      <h1>SecureCode Analyzer</h1>
+      <p>Compiler-Based Vulnerability Detection Engine</p>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="grid">
+
+    <!-- LEFT: CODE INPUT -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span>📝</span> Code Editor</div>
+        <div id="lineCount" style="font-size:11px;color:var(--muted);">0 lines</div>
+      </div>
+      <div class="lang-bar">
+        <button class="lang-btn active" onclick="setLang(this,'python')">🐍 Python</button>
+        <button class="lang-btn" onclick="setLang(this,'javascript')">🟨 JavaScript</button>
+        <button class="lang-btn" onclick="setLang(this,'c')">⚙️ C/C++</button>
+        <button class="lang-btn" onclick="setLang(this,'php')">🐘 PHP</button>
+        <button class="lang-btn" onclick="setLang(this,'java')">☕ Java</button>
+      </div>
+      <div class="samples-section">
+        <div class="samples-title">⚡ Quick Samples</div>
+        <div class="sample-chips" id="sampleChips"></div>
+      </div>
+      <div style="height:10px"></div>
+      <div class="code-area">
+        <textarea id="codeInput" spellcheck="false" placeholder="// Paste or type your code here...
+// The analyzer will detect:
+//  • SQL Injection vulnerabilities
+//  • Buffer overflow risks
+//  • XSS (Cross-Site Scripting)
+//  • Hardcoded passwords/secrets
+//  • Insecure input validation
+//
+// Try a Quick Sample above!"></textarea>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="analyzeBtn" onclick="analyzeCode()">
+          🔍 Analyze Code
+        </button>
+        <button class="btn btn-secondary" onclick="clearAll()">🗑️ Clear</button>
+        <button class="btn btn-secondary" onclick="copyReport()">📋 Report</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: RESULTS -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span>🚨</span> Vulnerability Report</div>
+        <div class="score-ring" id="scoreDisplay" style="display:none">
+          <span>Security Score:</span>
+          <span class="score-num" id="scoreVal">-</span>
+          <span style="font-size:11px">/100</span>
+        </div>
+      </div>
+      <div class="summary-bar" id="summaryBar" style="display:none">
+        <div class="summary-cell"><div class="count c-red" id="cnt-critical">0</div><div class="label">Critical</div></div>
+        <div class="summary-cell"><div class="count c-orange" id="cnt-high">0</div><div class="label">High</div></div>
+        <div class="summary-cell"><div class="count c-yellow" id="cnt-medium">0</div><div class="label">Medium</div></div>
+        <div class="summary-cell"><div class="count c-green" id="cnt-low">0</div><div class="label">Low</div></div>
+      </div>
+      <div class="results-area">
+        <div id="emptyState" class="empty-state">
+          <div class="icon">🔎</div>
+          <p>Paste your code on the left and<br>click <strong>Analyze Code</strong> to begin scanning.</p>
+        </div>
+        <div id="safeState" class="safe-state" style="display:none">
+          <div class="icon">✅</div>
+          <h3>No Vulnerabilities Found!</h3>
+          <p>Your code passed all security checks.<br>Keep following secure coding practices.</p>
+        </div>
+        <div class="vuln-list" id="vulnList"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- REPORT ROW -->
+  <div id="reportSection" style="display:none; margin-top:24px;">
+    <div class="panel report-panel">
+      <div class="panel-header">
+        <div class="panel-title"><span>📊</span> Analysis Summary Report</div>
+        <span id="reportTimestamp" style="font-size:11px;color:var(--muted)"></span>
+      </div>
+      <div class="report-inner">
+        <div class="report-grid" id="reportGrid"></div>
+        <div id="reportText" style="margin-top:16px; font-size:12px; color:var(--muted); line-height:1.8;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  VULNERABILITY RULES DATABASE
+// ─────────────────────────────────────────────
+const RULES = {
+  python: [
+    {
+      id: 'SQL_INJ_PY', type: 'SQL Injection', severity: 'critical', icon: '💉',
+      patterns: [
+        /execute\s*\(\s*["'`].*(%s|%d|\+|f"|f').*["'`]/i,
+        /cursor\.execute\s*\([^,)]*\+/i,
+        /f["'].*SELECT.*{/i,
+        /["'].*SELECT.*["']\s*\+\s*\w/i,
+      ],
+      desc: 'User input is concatenated directly into an SQL query, allowing attackers to manipulate the query.',
+      fix: 'Use parameterized queries: cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))'
+    },
+    {
+      id: 'HARDCODED_PW', type: 'Hardcoded Secret', severity: 'critical', icon: '🔑',
+      patterns: [
+        /password\s*=\s*["'][^"']{3,}/i,
+        /passwd\s*=\s*["'][^"']{3,}/i,
+        /secret\s*=\s*["'][^"']{3,}/i,
+        /api_key\s*=\s*["'][^"']{3,}/i,
+        /token\s*=\s*["'][^"']{3,}/i,
+      ],
+      desc: 'Credentials or secrets are hardcoded into the source code, easily exposed if code is leaked.',
+      fix: 'Store secrets in environment variables: os.environ.get("DB_PASSWORD")'
+    },
+    {
+      id: 'XSS_PY', type: 'XSS Vulnerability', severity: 'high', icon: '🌐',
+      patterns: [
+        /render_template_string\s*\(/i,
+        /Markup\s*\([^)]*request\./i,
+        /\.format\s*\([^)]*request\./i,
+      ],
+      desc: 'User-supplied data is rendered without sanitization, enabling script injection attacks.',
+      fix: 'Use Jinja2 autoescaping or escape(user_input) before rendering.'
+    },
+    {
+      id: 'EVAL_PY', type: 'Code Injection (eval)', severity: 'critical', icon: '💣',
+      patterns: [/\beval\s*\([^)]*input\b/i, /\beval\s*\([^)]*request\./i, /\bexec\s*\([^)]*input\b/i],
+      desc: 'eval() or exec() called with user input allows arbitrary code execution.',
+      fix: 'Never pass user input to eval()/exec(). Use AST literal_eval() for safe evaluation.'
+    },
+    {
+      id: 'INSECURE_DESER', type: 'Insecure Deserialization', severity: 'high', icon: '📦',
+      patterns: [/pickle\.loads\b/i, /pickle\.load\b/i, /yaml\.load\s*\([^)]*Loader/i],
+      desc: 'Deserializing untrusted data can lead to remote code execution.',
+      fix: 'Use pickle only with trusted data. For YAML, use yaml.safe_load().'
+    },
+    {
+      id: 'WEAK_HASH', type: 'Weak Cryptography', severity: 'medium', icon: '🔓',
+      patterns: [/hashlib\.md5\b/i, /hashlib\.sha1\b/i, /md5\(/i],
+      desc: 'MD5 and SHA1 are cryptographically broken and should not be used for passwords.',
+      fix: 'Use bcrypt, argon2, or hashlib.sha256() for password hashing.'
+    },
+    {
+      id: 'OPEN_REDIRECT', type: 'Open Redirect', severity: 'medium', icon: '↪️',
+      patterns: [/redirect\s*\([^)]*request\.args/i, /redirect\s*\([^)]*request\.form/i],
+      desc: 'Redirecting to a user-supplied URL can be used for phishing.',
+      fix: 'Validate and whitelist allowed redirect URLs before redirecting.'
+    },
+    {
+      id: 'DEBUG_ON', type: 'Debug Mode Enabled', severity: 'low', icon: '🐛',
+      patterns: [/app\.run\s*\([^)]*debug\s*=\s*True/i, /DEBUG\s*=\s*True/i],
+      desc: 'Debug mode exposes stack traces and interactive debugger to end users.',
+      fix: 'Set DEBUG=False in production. Use environment variables to manage this.'
+    },
+  ],
+
+  javascript: [
+    {
+      id: 'XSS_JS', type: 'XSS via innerHTML', severity: 'critical', icon: '🌐',
+      patterns: [/\.innerHTML\s*=\s*[^"'`\n]*\+/i, /\.innerHTML\s*=.*req|param|input|user/i, /document\.write\s*\(/i],
+      desc: 'Assigning user-controlled data to innerHTML enables script injection.',
+      fix: 'Use textContent instead: element.textContent = userInput'
+    },
+    {
+      id: 'EVAL_JS', type: 'Code Injection (eval)', severity: 'critical', icon: '💣',
+      patterns: [/\beval\s*\(/i, /new\s+Function\s*\(/i, /setTimeout\s*\(\s*["'`]/i],
+      desc: 'eval() and new Function() execute arbitrary JavaScript strings.',
+      fix: 'Avoid eval() entirely. Use JSON.parse() for data, proper functions for logic.'
+    },
+    {
+      id: 'SQL_INJ_JS', type: 'SQL Injection', severity: 'critical', icon: '💉',
+      patterns: [/query\s*\(\s*["'`].*\$\{/i, /["'`]SELECT.*\$\{/i, /["'`].*WHERE.*\+\s*req\./i],
+      desc: 'Template literals building SQL queries with user data are vulnerable to injection.',
+      fix: 'Use parameterized queries: db.query("SELECT * FROM users WHERE id = ?", [userId])'
+    },
+    {
+      id: 'HARDCODED_JS', type: 'Hardcoded Secret', severity: 'critical', icon: '🔑',
+      patterns: [/password\s*[:=]\s*["'][^"']{3,}/i, /apiKey\s*[:=]\s*["'][^"']{3,}/i, /secret\s*[:=]\s*["'][^"']{3,}/i],
+      desc: 'Secrets in client-side JS are visible to anyone who views the source.',
+      fix: 'Move secrets server-side, use environment variables, never expose in frontend.'
+    },
+    {
+      id: 'INSEC_RANDOM', type: 'Insecure Randomness', severity: 'medium', icon: '🎲',
+      patterns: [/Math\.random\s*\(\)/i],
+      desc: 'Math.random() is not cryptographically secure for tokens or keys.',
+      fix: 'Use crypto.getRandomValues() or the Web Crypto API for security tokens.'
+    },
+    {
+      id: 'POSTMESSAGE', type: 'Insecure postMessage', severity: 'medium', icon: '📨',
+      patterns: [/\.postMessage\s*\([^,)]+,\s*["'`]\*["'`]/i],
+      desc: 'Wildcard origin in postMessage exposes data to any page.',
+      fix: 'Specify the target origin: window.postMessage(data, "https://yourdomain.com")'
+    },
+    {
+      id: 'PROTO_POLLUTION', type: 'Prototype Pollution', severity: 'high', icon: '☣️',
+      patterns: [/\[__proto__\]/i, /\.constructor\.prototype/i],
+      desc: 'Modifying Object prototype can affect all objects and lead to code injection.',
+      fix: 'Validate keys before merging objects. Use Object.create(null) for plain maps.'
+    },
+  ],
+
+  c: [
+    {
+      id: 'BUFF_OVER', type: 'Buffer Overflow', severity: 'critical', icon: '💥',
+      patterns: [/\bgets\s*\(/i, /\bscanf\s*\(\s*"%s"/i, /\bstrcpy\s*\(/i, /\bstrcat\s*\(/i, /\bsprintf\s*\(/i],
+      desc: 'Unsafe C functions like gets(), strcpy(), scanf("%s") do not check buffer bounds.',
+      fix: 'Use safe alternatives: fgets(), strncpy(), strlcpy(), snprintf() with size limits.'
+    },
+    {
+      id: 'FORMAT_STR', type: 'Format String Attack', severity: 'critical', icon: '📄',
+      patterns: [/printf\s*\(\s*\w+\s*\)/i, /fprintf\s*\(\s*\w+\s*,\s*\w+\s*\)/i],
+      desc: 'Passing user input directly as printf format string allows memory read/write.',
+      fix: 'Always use a format string literal: printf("%s", user_input)'
+    },
+    {
+      id: 'INTEGER_OVER', type: 'Integer Overflow', severity: 'high', icon: '🔢',
+      patterns: [/malloc\s*\([^)]*\*[^)]*\)/i, /calloc\s*\([^)]*\+/i],
+      desc: 'Arithmetic operations on sizes before allocation can overflow and lead to heap bugs.',
+      fix: 'Validate size parameters and check for overflow before malloc().'
+    },
+    {
+      id: 'USE_AFTER_FREE', type: 'Use After Free', severity: 'critical', icon: '♻️',
+      patterns: [/free\s*\(\s*\w+\s*\)\s*;(?!\s*\w+\s*=\s*NULL)/i],
+      desc: 'Using memory after it has been freed can lead to crashes or code execution.',
+      fix: 'Set pointer to NULL immediately after free: free(ptr); ptr = NULL;'
+    },
+    {
+      id: 'HARDCODED_C', type: 'Hardcoded Password', severity: 'critical', icon: '🔑',
+      patterns: [/strcmp\s*\([^,)]+,\s*["'][^"']{3,}["']\s*\)/i, /password\s*=\s*["'][^"']{3,}/i],
+      desc: 'Password comparison with a hardcoded string is insecure and bypassable.',
+      fix: 'Use cryptographic password hashing. Never store plaintext passwords.'
+    },
+    {
+      id: 'RAND_C', type: 'Weak Randomness', severity: 'medium', icon: '🎲',
+      patterns: [/\brand\s*\(\)/i, /\bsrand\s*\(\s*time\b/i],
+      desc: 'rand() is a predictable pseudorandom generator, not suitable for security.',
+      fix: 'Use /dev/urandom or platform-specific CSPRNG (getrandom(), BCryptGenRandom).'
+    },
+  ],
+
+  php: [
+    {
+      id: 'SQL_INJ_PHP', type: 'SQL Injection', severity: 'critical', icon: '💉',
+      patterns: [/\$_GET\[.*\].*mysql_query/i, /mysql_query\s*\([^)]*\$_/i, /query\s*\([^)]*\$_(GET|POST|REQUEST)/i, /["'].*SELECT.*["']\s*\.\s*\$_/i],
+      desc: 'User input from $_GET/$_POST is used directly in an SQL query.',
+      fix: 'Use PDO prepared statements: $stmt = $pdo->prepare("SELECT * WHERE id = ?"); $stmt->execute([$_GET["id"]]);'
+    },
+    {
+      id: 'XSS_PHP', type: 'XSS Vulnerability', severity: 'critical', icon: '🌐',
+      patterns: [/echo\s+\$_(GET|POST|REQUEST|COOKIE)/i, /print\s+\$_(GET|POST|REQUEST)/i],
+      desc: 'Outputting unescaped user input enables cross-site scripting.',
+      fix: 'Use htmlspecialchars(): echo htmlspecialchars($_GET["name"], ENT_QUOTES, "UTF-8");'
+    },
+    {
+      id: 'CMD_INJECT_PHP', type: 'Command Injection', severity: 'critical', icon: '💣',
+      patterns: [/exec\s*\([^)]*\$_/i, /system\s*\([^)]*\$_/i, /shell_exec\s*\([^)]*\$_/i, /passthru\s*\([^)]*\$_/i],
+      desc: 'Passing user input to shell commands allows arbitrary OS command execution.',
+      fix: 'Use escapeshellarg() and avoid shell commands entirely when possible.'
+    },
+    {
+      id: 'FILE_INCL_PHP', type: 'File Inclusion', severity: 'critical', icon: '📂',
+      patterns: [/include\s*\(\s*\$_(GET|POST)/i, /require\s*\(\s*\$_(GET|POST)/i, /include_once\s*\(\s*\$_/i],
+      desc: 'Including files based on user input enables Local/Remote File Inclusion attacks.',
+      fix: 'Use a whitelist of allowed file names: $allowed = ["home","about"]; if(in_array($page, $allowed)) include $page.".php";'
+    },
+    {
+      id: 'HARDCODED_PHP', type: 'Hardcoded Secret', severity: 'high', icon: '🔑',
+      patterns: [/\$password\s*=\s*["'][^"']{3,}/i, /\$db_pass\s*=\s*["'][^"']{3,}/i, /define\s*\(\s*["'].*PASSWORD["']\s*,\s*["'][^"']{3,}/i],
+      desc: 'Database or application passwords stored as string literals in PHP files.',
+      fix: 'Use $_ENV["DB_PASSWORD"] with a .env file excluded from version control.'
+    },
+  ],
+
+  java: [
+    {
+      id: 'SQL_INJ_JAVA', type: 'SQL Injection', severity: 'critical', icon: '💉',
+      patterns: [/Statement\.execute.*\+\s*\w/i, /createStatement\(\).*execute/i, /["'].*SELECT.*["']\s*\+/i],
+      desc: 'String concatenation in JDBC queries leads to SQL injection.',
+      fix: 'Use PreparedStatement: PreparedStatement ps = conn.prepareStatement("SELECT * WHERE id=?"); ps.setInt(1, id);'
+    },
+    {
+      id: 'XSS_JAVA', type: 'XSS Vulnerability', severity: 'high', icon: '🌐',
+      patterns: [/getParameter\s*\(.*\).*out\.print/i, /response\.getWriter\(\)\.print.*getParameter/i],
+      desc: 'Unescaped request parameters written to HTTP response enable XSS.',
+      fix: 'Use OWASP Java Encoder: Encode.forHtml(request.getParameter("name"))'
+    },
+    {
+      id: 'DESER_JAVA', type: 'Insecure Deserialization', severity: 'critical', icon: '📦',
+      patterns: [/ObjectInputStream\b/i, /readObject\s*\(\)/i],
+      desc: 'Java deserialization of untrusted data can lead to RCE (log4shell-type bugs).',
+      fix: 'Validate serialized data, use serialization filters (JEP 290), prefer JSON/XML.'
+    },
+    {
+      id: 'HARDCODED_JAVA', type: 'Hardcoded Secret', severity: 'critical', icon: '🔑',
+      patterns: [/String\s+password\s*=\s*["'][^"']{3,}/i, /String\s+secret\s*=\s*["'][^"']{3,}/i],
+      desc: 'Hardcoded credentials in Java source code are exposed in compiled bytecode.',
+      fix: 'Use System.getenv("DB_PASSWORD") or a secrets management service.'
+    },
+    {
+      id: 'WEAK_CRYPTO_JAVA', type: 'Weak Cryptography', severity: 'high', icon: '🔓',
+      patterns: [/MessageDigest\.getInstance\s*\(\s*["']MD5["']\)/i, /MessageDigest\.getInstance\s*\(\s*["']SHA-1["']\)/i, /Cipher\.getInstance\s*\(\s*["']DES/i],
+      desc: 'MD5, SHA-1, and DES are deprecated cryptographic algorithms.',
+      fix: 'Use SHA-256 or SHA-3 for hashing. Use AES-256-GCM for encryption.'
+    },
+  ]
+};
+
+// ─────────────────────────────────────────────
+//  SAMPLE VULNERABLE CODE
+// ─────────────────────────────────────────────
+const SAMPLES = {
+  python: [
+    {
+      name: 'SQL Injection', code:
+`import sqlite3
+
+def get_user(username):
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    # VULNERABLE: Direct string concatenation
+    query = "SELECT * FROM users WHERE username = '" + username + "'"
+    cursor.execute(query)
+    return cursor.fetchone()
+
+# Hardcoded credentials
+password = "admin123"
+api_key = "sk-abc123secret"
+
+app.run(debug=True)`
+    },
+    {
+      name: 'Code Injection', code:
+`from flask import Flask, request, render_template_string
+
+app = Flask(__name__)
+
+@app.route('/calc')
+def calculate():
+    expr = request.args.get('expr')
+    # VULNERABLE: eval with user input
+    result = eval(expr)
+    
+    # VULNERABLE: XSS via render_template_string
+    return render_template_string('<h1>' + expr + '</h1>')
+
+import hashlib
+# Weak hashing
+h = hashlib.md5(password.encode()).hexdigest()`
+    },
+  ],
+  javascript: [
+    {
+      name: 'XSS Attack', code:
+`// VULNERABLE: XSS via innerHTML
+const userInput = document.location.hash.slice(1);
+document.getElementById('output').innerHTML = userInput;
+
+// VULNERABLE: eval usage
+const code = new URLSearchParams(location.search).get('run');
+eval(code);
+
+// Hardcoded API key
+const apiKey = "AIzaSyB12345secretkey";
+const secret = "my_super_secret_123";
+
+// Insecure random token
+const token = Math.random().toString(36);`
+    },
+    {
+      name: 'SQL Injection', code:
+`const express = require('express');
+const db = require('./db');
+
+app.get('/user', async (req, res) => {
+  const id = req.query.id;
+  // VULNERABLE: Template literal SQL
+  const user = await db.query(\`SELECT * FROM users WHERE id = \${id}\`);
+  
+  // Prototype pollution
+  const merged = { ...obj, [req.body.__proto__]: req.body.value };
+  
+  res.send(user);
+});`
+    }
+  ],
+  c: [
+    {
+      name: 'Buffer Overflow', code:
+`#include <stdio.h>
+#include <string.h>
+
+void login(char *input) {
+    char buffer[64];
+    // VULNERABLE: no bounds check
+    gets(buffer);
+    strcpy(buffer, input);
+    
+    // Format string vulnerability
+    printf(input);
+    
+    // Hardcoded password
+    if (strcmp(input, "admin123") == 0) {
+        printf("Access granted\\n");
+    }
+}
+
+int main() {
+    char *ptr = malloc(100);
+    free(ptr);
+    // USE AFTER FREE: ptr still used below
+    strcpy(ptr, "hello");
+    return 0;
+}`
+    }
+  ],
+  php: [
+    {
+      name: 'SQL + XSS', code:
+`<?php
+// VULNERABLE: SQL Injection
+$id = $_GET['id'];
+$result = mysql_query("SELECT * FROM users WHERE id = " . $id);
+
+// VULNERABLE: XSS
+echo "Welcome " . $_GET['name'];
+
+// VULNERABLE: Command injection
+$file = $_POST['filename'];
+system("ls " . $file);
+
+// VULNERABLE: File inclusion
+$page = $_GET['page'];
+include($page . '.php');
+
+// Hardcoded password
+$password = "supersecret123";
+?>`
+    }
+  ],
+  java: [
+    {
+      name: 'SQL + Crypto', code:
+`import java.sql.*;
+import java.security.*;
+
+public class UserService {
+    // Hardcoded secret
+    String password = "db_pass_2024";
+    
+    public User findUser(String username) throws Exception {
+        Connection conn = DriverManager.getConnection(url);
+        Statement stmt = conn.createStatement();
+        // VULNERABLE: SQL injection
+        ResultSet rs = stmt.executeQuery(
+            "SELECT * FROM users WHERE name = '" + username + "'"
+        );
+        
+        // Weak hash
+        MessageDigest md = MessageDigest.getInstance("MD5");
+        
+        // Insecure deserialization
+        ObjectInputStream ois = new ObjectInputStream(inputStream);
+        Object obj = ois.readObject();
+        return (User) obj;
+    }
+}`
+    }
+  ]
+};
+
+// ─────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────
+let currentLang = 'python';
+let lastResults = [];
+
+// ─────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────
+function setLang(btn, lang) {
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentLang = lang;
+  renderSamples();
+}
+
+function renderSamples() {
+  const chips = document.getElementById('sampleChips');
+  const samples = SAMPLES[currentLang] || [];
+  chips.innerHTML = samples.map((s,i) =>
+    `<div class="sample-chip" onclick="loadSample(${i})">${s.name}</div>`
+  ).join('');
+}
+
+function loadSample(i) {
+  const code = (SAMPLES[currentLang] || [])[i]?.code || '';
+  document.getElementById('codeInput').value = code;
+  updateLineCount();
+}
+
+document.getElementById('codeInput').addEventListener('input', updateLineCount);
+function updateLineCount() {
+  const lines = document.getElementById('codeInput').value.split('\n').length;
+  document.getElementById('lineCount').textContent = `${lines} line${lines!==1?'s':''}`;
+}
+
+renderSamples();
+
+// ─────────────────────────────────────────────
+//  ANALYZER
+// ─────────────────────────────────────────────
+function analyzeCode() {
+  const code = document.getElementById('codeInput').value.trim();
+  if (!code) { alert('Please enter some code to analyze!'); return; }
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="scanning">⏳</span> Scanning...';
+
+  // Animate progress
+  const fill = document.getElementById('progressFill');
+  fill.style.width = '0%';
+  let p = 0;
+  const pi = setInterval(() => {
+    p += Math.random() * 18;
+    if (p >= 90) { clearInterval(pi); p = 90; }
+    fill.style.width = p + '%';
+  }, 80);
+
+  setTimeout(() => {
+    clearInterval(pi);
+    fill.style.width = '100%';
+    const results = scan(code, currentLang);
+    lastResults = results;
+    renderResults(results, code);
+    btn.disabled = false;
+    btn.innerHTML = '🔍 Analyze Code';
+    setTimeout(() => fill.style.width = '0%', 800);
+  }, 1100);
+}
+
+function scan(code, lang) {
+  const rules = RULES[lang] || [];
+  const lines = code.split('\n');
+  const findings = [];
+
+  rules.forEach(rule => {
+    rule.patterns.forEach(pattern => {
+      lines.forEach((line, idx) => {
+        if (pattern.test(line)) {
+          // Avoid duplicate findings for same rule
+          if (!findings.find(f => f.id === rule.id && Math.abs(f.lineNum - (idx+1)) < 3)) {
+            findings.push({
+              id: rule.id,
+              type: rule.type,
+              severity: rule.severity,
+              icon: rule.icon,
+              desc: rule.desc,
+              fix: rule.fix,
+              lineNum: idx + 1,
+              lineText: line.trim().substring(0, 80)
+            });
+          }
+        }
+      });
+    });
+  });
+
+  // Sort by severity
+  const order = { critical: 0, high: 1, medium: 2, low: 3 };
+  findings.sort((a, b) => order[a.severity] - order[b.severity]);
+  return findings;
+}
+
+function renderResults(results, code) {
+  const empty = document.getElementById('emptyState');
+  const safe = document.getElementById('safeState');
+  const list = document.getElementById('vulnList');
+  const summary = document.getElementById('summaryBar');
+  const scoreDisplay = document.getElementById('scoreDisplay');
+  const reportSection = document.getElementById('reportSection');
+
+  empty.style.display = 'none';
+  list.innerHTML = '';
+
+  const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+  results.forEach(r => counts[r.severity]++);
+
+  document.getElementById('cnt-critical').textContent = counts.critical;
+  document.getElementById('cnt-high').textContent = counts.high;
+  document.getElementById('cnt-medium').textContent = counts.medium;
+  document.getElementById('cnt-low').textContent = counts.low;
+
+  if (results.length === 0) {
+    safe.style.display = 'block';
+    summary.style.display = 'none';
+    scoreDisplay.style.display = 'none';
+    reportSection.style.display = 'none';
+    return;
+  }
+
+  safe.style.display = 'none';
+  summary.style.display = 'grid';
+  scoreDisplay.style.display = 'flex';
+
+  // Score calculation
+  const penalty = counts.critical * 25 + counts.high * 15 + counts.medium * 7 + counts.low * 3;
+  const score = Math.max(0, 100 - penalty);
+  const scoreEl = document.getElementById('scoreVal');
+  scoreEl.textContent = score;
+  scoreEl.style.color = score >= 80 ? 'var(--green)' : score >= 50 ? 'var(--yellow)' : 'var(--red)';
+
+  results.forEach(v => {
+    const div = document.createElement('div');
+    div.className = `vuln-item ${v.severity}`;
+    div.innerHTML = `
+      <div class="vuln-top">
+        <div class="vuln-type">${v.icon} ${v.type}</div>
+        <span class="sev-badge sev-${v.severity}">${v.severity}</span>
+      </div>
+      <div class="vuln-desc">${v.desc}</div>
+      <div class="vuln-line">📍 Line ${v.lineNum}: <code>${escHtml(v.lineText)}</code></div>
+      <div class="vuln-fix"><strong>✅ Fix:</strong> ${escHtml(v.fix)}</div>
+    `;
+    list.appendChild(div);
+  });
+
+  // Report section
+  reportSection.style.display = 'block';
+  document.getElementById('reportTimestamp').textContent =
+    new Date().toLocaleString();
+
+  const totalLines = code.split('\n').length;
+  document.getElementById('reportGrid').innerHTML = `
+    <div class="report-card"><div class="rc-label">Lines Analyzed</div><div class="rc-val">${totalLines}</div></div>
+    <div class="report-card"><div class="rc-label">Vulnerabilities Found</div><div class="rc-val" style="color:var(--red)">${results.length}</div></div>
+    <div class="report-card"><div class="rc-label">Security Score</div><div class="rc-val" style="color:${score>=80?'var(--green)':score>=50?'var(--yellow)':'var(--red)'}">${score}/100</div></div>
+  `;
+
+  const sevMap = { critical: '🔴', high: '🟠', medium: '🟡', low: '🟢' };
+  document.getElementById('reportText').innerHTML =
+    `<strong style="color:var(--text)">Detected Vulnerability Types:</strong><br>` +
+    [...new Set(results.map(r => r.type))].map(t => {
+      const r = results.find(x => x.type === t);
+      return `${sevMap[r.severity]} <strong>${t}</strong> — ${r.desc}`;
+    }).join('<br>');
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function clearAll() {
+  document.getElementById('codeInput').value = '';
+  document.getElementById('vulnList').innerHTML = '';
+  document.getElementById('emptyState').style.display = 'block';
+  document.getElementById('safeState').style.display = 'none';
+  document.getElementById('summaryBar').style.display = 'none';
+  document.getElementById('scoreDisplay').style.display = 'none';
+  document.getElementById('reportSection').style.display = 'none';
+  document.getElementById('lineCount').textContent = '0 lines';
+  lastResults = [];
+}
+
+function copyReport() {
+  if (!lastResults.length) { alert('Run an analysis first!'); return; }
+  const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+  lastResults.forEach(r => counts[r.severity]++);
+  const text = [
+    '=== SECURECODE ANALYZER REPORT ===',
+    `Date: ${new Date().toLocaleString()}`,
+    `Language: ${currentLang.toUpperCase()}`,
+    `Total Vulnerabilities: ${lastResults.length}`,
+    `Critical: ${counts.critical} | High: ${counts.high} | Medium: ${counts.medium} | Low: ${counts.low}`,
+    '',
+    ...lastResults.map((v,i) =>
+      `[${i+1}] ${v.severity.toUpperCase()} - ${v.type}\n    Line ${v.lineNum}: ${v.lineText}\n    Issue: ${v.desc}\n    Fix: ${v.fix}`
+    )
+  ].join('\n');
+  navigator.clipboard.writeText(text).then(() => alert('Report copied to clipboard!'));
+}
+</script>
+</body>
+</html>
